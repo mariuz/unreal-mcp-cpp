@@ -1,0 +1,25 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0.0",
+	"FriendlyName": "Unreal MCP",
+	"Description": "Model Context Protocol (MCP) server for Unreal Engine. Exposes editor functionality to AI agents via a C++ TCP server implementing the MCP/JSON-RPC 2.0 protocol. Provides deep access to actors, Blueprints, and editor subsystems without requiring Python scripting.",
+	"Category": "Editor",
+	"CreatedBy": "Unreal MCP Contributors",
+	"CreatedByURL": "https://github.com/mariuz/unreal-mcp-cpp",
+	"DocsURL": "https://github.com/mariuz/unreal-mcp-cpp/blob/main/README.md",
+	"MarketplaceURL": "",
+	"SupportURL": "https://github.com/mariuz/unreal-mcp-cpp/issues",
+	"EngineVersion": "5.3.0",
+	"CanContainContent": false,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "UnrealMCP",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		}
+	]
+}

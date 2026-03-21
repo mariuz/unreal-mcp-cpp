@@ -1,0 +1,26 @@
+# Unreal Engine build artifacts
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.xcworkspace
+*.xcodeproj
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+
+# Rider
+.idea/
+*.DotSettings.user
+
+# macOS
+.DS_Store
+
+# Log files
+*.log
