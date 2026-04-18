@@ -65,10 +65,22 @@ MyProject/
         └── Source/
 ```
 
-Then regenerate project files and build.
+Then:
+
+1. Right-click your `.uproject` and regenerate project files (or use **Tools → Refresh Visual Studio Project** in the editor).
+2. Open the project in Visual Studio/Xcode and build the `Editor` target (for example `MyProjectEditor` in `Development Editor`).
+3. Launch the Unreal Editor, open **Edit → Plugins**, and verify **Unreal MCP** is enabled.
+4. Restart the editor if prompted.
 
 ### Method 2 – Engine plugins folder
 Copy `UnrealMCP/` into `<UnrealEngine>/Engine/Plugins/Editor/`.
+
+Then:
+
+1. Regenerate engine/project files.
+2. Build your project `Editor` target (or build Unreal Editor from source if you use a source-built engine).
+3. Open Unreal Editor and confirm **Unreal MCP** is enabled in **Edit → Plugins**.
+4. Restart the editor if prompted.
 
 ---
 
@@ -315,6 +327,9 @@ $tcp.Close()
 ```
 
 Expected output contains `"result":{"message":"pong"}`.
+
+- **Project plugin install**: build `<YourProjectName>Editor` in `Development Editor`.
+- **Engine plugin install**: build your project `Editor` target, or build `UnrealEditor` if using a source-built engine.
 
 ---
 
