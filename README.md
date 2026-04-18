@@ -108,10 +108,30 @@ Bind address: `0.0.0.0` (all interfaces; firewall accordingly)
 
 ---
 
-## Quick-start with Claude Desktop / cursor
+## Connecting from an MCP Client
 
-Add to your MCP client configuration:
+The UnrealMCP server listens on **TCP port 3000** using **Content-Length framing** (same as the Language Server Protocol).  
+Most MCP clients that support the `stdio` transport can connect via a small TCP-bridge command.
 
+### Claude Desktop
+
+Edit your Claude Desktop config file:
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+**Windows** (using `ncat` from [Nmap](https://nmap.org/download.html)):
+```json
+{
+  "mcpServers": {
+    "unreal": {
+      "command": "ncat",
+      "args": ["127.0.0.1", "3000"]
+    }
+  }
+}
+```
+
+**macOS / Linux** (using `nc`):
 ```json
 {
   "mcpServers": {
@@ -123,17 +143,90 @@ Add to your MCP client configuration:
 }
 ```
 
-Or use any MCP-compatible client that supports TCP transport.
+After saving the config, restart Claude Desktop. You should see **"unreal"** listed under connected MCP servers.
 
-### Example: list all Static Mesh actors
+> **Windows note:** The built-in `nc` / `netcat` is not available on Windows.  
+> Install **Nmap** (which bundles `ncat`) from https://nmap.org/download.html, or use **WSL** and point the command at `wsl nc 127.0.0.1 3000`.
+
+### Cursor
+
+Open **Cursor → Settings → MCP** and add a new server entry:
+
+```json
+{
+  "mcpServers": {
+    "unreal": {
+      "command": "ncat",
+      "args": ["127.0.0.1", "3000"]
+    }
+  }
+}
+```
+
+On macOS/Linux replace `ncat` with `nc`.
+
+### VS Code (with GitHub Copilot or other MCP extensions)
+
+Add to your `.vscode/mcp.json` (or user settings under `mcp.servers`):
+
+```json
+{
+  "servers": {
+    "unreal": {
+      "type": "stdio",
+      "command": "ncat",
+      "args": ["127.0.0.1", "3000"]
+    }
+  }
+}
+```
+
+### Manual testing with PowerShell (Windows)
+
+```powershell
+$tcp = [System.Net.Sockets.TcpClient]::new("127.0.0.1", 3000)
+$stream = $tcp.GetStream()
+
+# Send initialize
+$msg = '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
+$frame = "Content-Length: $($msg.Length)`r`n`r`n$msg"
+$bytes = [System.Text.Encoding]::UTF8.GetBytes($frame)
+$stream.Write($bytes, 0, $bytes.Length)
+
+# Read response (allow up to 500 ms for the server to reply)
+Start-Sleep -Milliseconds 500
+$buf = New-Object byte[] 65536
+$n = $stream.Read($buf, 0, $buf.Length)
+[System.Text.Encoding]::UTF8.GetString($buf, 0, $n)
+
+$tcp.Close()
+```
+
+### Example tool calls
+
+**List all Static Mesh actors:**
 ```json
 {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_actors_in_level","arguments":{"class_filter":"StaticMeshActor","max_results":100}}}
 ```
 
-### Example: create a point light
+**Create a point light:**
 ```json
 {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create_actor","arguments":{"class":"PointLight","name":"MyLight","location":{"x":0,"y":0,"z":300}}}}
 ```
+
+**Get editor info:**
+```json
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_editor_info","arguments":{}}}
+```
+
+### Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Connection refused on port 3000 | Plugin not loaded or server not started | Check Output Log for `[MCP] Server listening on port 3000` |
+| `ncat` not found on Windows | ncat not installed | Install Nmap from https://nmap.org/download.html |
+| Client shows no tools | `tools/list` not sent after `initialize` | Ensure the MCP client sends `initialized` notification |
+| Responses are garbled | Missing Content-Length framing | Use a bridge tool (`ncat`/`nc`) instead of raw `telnet` |
 
 ---
 
@@ -145,7 +238,83 @@ Requires **Unreal Engine 5.3+** with the following modules (all included in the 
 - `UnrealEd`, `BlueprintGraph`, `Kismet`, `KismetCompiler`
 - `AssetTools`, `AssetRegistry`, `LevelEditor`
 
-Generate Visual Studio / Xcode project files, then build the `Editor` target.
+### Building on Windows
+
+#### Prerequisites
+
+1. **Unreal Engine 5.3 or later** – Install via the Epic Games Launcher or build from source.
+2. **Visual Studio 2022** (Community, Professional, or Enterprise) with the following workloads:
+   - **Desktop development with C++**
+   - **Game development with C++** (optional but recommended)
+3. **.NET 6.0 SDK or later** – Required by UnrealBuildTool.
+
+> **Tip:** When installing Visual Studio, make sure to include the **C++ CMake tools for Windows** and **Windows 10/11 SDK** components.
+
+#### Step-by-step
+
+1. **Copy the plugin** into your project's `Plugins` folder (see [Installation](#installation)).
+
+2. **Generate Visual Studio project files**  
+   Right-click your `.uproject` file in Windows Explorer and select  
+   **"Generate Visual Studio project files"**.  
+   This runs `UnrealBuildTool` and creates a `.sln` file next to your `.uproject`.
+
+   Alternatively, run from a Developer Command Prompt:
+   ```bat
+   "C:\Program Files\Epic Games\UE_5.3\Engine\Binaries\DotNET\UnrealBuildTool\UnrealBuildTool.exe" ^
+       -projectfiles -project="C:\Path\To\MyProject\MyProject.uproject" -game -rocket -progress
+   ```
+
+3. **Open the solution** – Double-click the generated `MyProject.sln` in Visual Studio 2022.
+
+4. **Set the build configuration**  
+   In the Visual Studio toolbar, select:
+   - Configuration: **Development Editor**
+   - Platform: **Win64**
+
+5. **Build**  
+   Press **Ctrl+Shift+B** or right-click the project in Solution Explorer and choose **Build**.  
+   The first build can take 5–20 minutes depending on your hardware.
+
+6. **Launch the editor**  
+   After a successful build, press **F5** (or click **Local Windows Debugger**) to start the Unreal Editor.  
+   The **UnrealMCP** plugin will automatically start the TCP server on port **3000**.
+
+#### Rebuilding after plugin changes
+
+After editing plugin source files, rebuild only the Editor target:
+
+```bat
+"C:\Program Files\Epic Games\UE_5.3\Engine\Build\BatchFiles\Build.bat" ^
+    MyProjectEditor Win64 Development ^
+    "C:\Path\To\MyProject\MyProject.uproject" -WaitMutex -FromMsBuild
+```
+
+#### Verifying the server is running
+
+Open **PowerShell** and run:
+
+```powershell
+Test-NetConnection -ComputerName 127.0.0.1 -Port 3000
+```
+
+You should see `TcpTestSucceeded : True`.  
+You can also send a raw ping:
+
+```powershell
+$tcp = [System.Net.Sockets.TcpClient]::new("127.0.0.1", 3000)
+$stream = $tcp.GetStream()
+$msg = '{"jsonrpc":"2.0","id":1,"method":"ping","params":{}}'
+$frame = "Content-Length: $($msg.Length)`r`n`r`n$msg"
+$bytes = [System.Text.Encoding]::UTF8.GetBytes($frame)
+$stream.Write($bytes, 0, $bytes.Length)
+$buf = New-Object byte[] 4096
+$n = $stream.Read($buf, 0, $buf.Length)
+[System.Text.Encoding]::UTF8.GetString($buf, 0, $n)
+$tcp.Close()
+```
+
+Expected output contains `"result":{"message":"pong"}`.
 
 ---
 
