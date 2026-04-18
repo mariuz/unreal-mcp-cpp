@@ -177,6 +177,26 @@ Open **Cursor → Settings → MCP** and add a new server entry:
 
 On macOS/Linux replace `ncat` with `nc`.
 
+### Gemini CLI
+
+Add this to your Gemini CLI settings file:
+- **Global:** `~/.gemini/settings.json`
+- **Project-local:** `.gemini/settings.json`
+
+```json
+{
+  "mcpServers": {
+    "unreal": {
+      "command": "ncat",
+      "args": ["127.0.0.1", "3000"]
+    }
+  }
+}
+```
+
+On macOS/Linux replace `ncat` with `nc`, then restart Gemini CLI.
+You can run `/mcp` in Gemini CLI to verify the server is connected.
+
 ### VS Code (with GitHub Copilot or other MCP extensions)
 
 Add to your `.vscode/mcp.json` (or user settings under `mcp.servers`):
